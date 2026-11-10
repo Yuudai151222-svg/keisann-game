@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>計算の順序マスター！ 〜カッコと四則の冒険〜</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Friendly Japanese Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=MURECHO:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Kosugi Maru', 'MURECHO', sans-serif;
+            background-color: #f0fdf4;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Chalkboard Effect */
+        .chalkboard {
+            background: #1e3a2b;
+            border: 12px solid #854d0e;
+            border-radius: 1.5rem;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .chalkboard::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.2) 100%);
+            pointer-events: none;
+            border-radius: 1rem;
+        }
+
+        /* Custom Animations */
+        @keyframes bounce-short {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-short {
+            animation: bounce-short 0.4s ease infinite;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        /* Highlight pulse for hint */
+        .highlight-part {
+            background-color: rgba(254, 240, 138, 0.3);
+            border-bottom: 4px solid #facc15;
+            border-radius: 6px;
+            padding: 2px 6px;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Keypad Button Styling */
+        .btn-key {
+            background: linear-gradient(to bottom, #ffffff, #f1f5f9);
+            box-shadow: 0 5px 0 #cbd5e1, 0 8px 10px rgba(0,0,0,0.15);
+            transition: all 0.05s ease;
+        }
+        .btn-key:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #cbd5e1, 0 3px 5px rgba(0,0,0,0.1);
+        }
+
+        .btn-action {
+            box-shadow: 0 5px 0 rgba(0,0,0,0.2), 0 8px 10px rgba(0,0,0,0.15);
+            transition: all 0.05s ease;
+        }
+        .btn-action:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.2), 0 3px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Hanamaru SVG style */
+        .hanamaru {
+            stroke: #ef4444;
+            stroke-width: 4;
+            fill: none;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 0.8s ease-in-out forwards;
+        }
+        @keyframes draw {
+            to { stroke-dashoffset: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 text-gray-800">
+
+    <!-- Top Header Navigation -->
+    <header class="w-full max-w-3xl flex justify-between items-center bg-white rounded-2xl p-3 sm:p-4 shadow-md mb-3 border-2 border-green-200">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+            <div class="bg-emerald-500 text-white p-2 rounded-xl text-xl font-black shadow">
+                <i class="fa-solid font-bold fa-calculator"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-base sm:text-lg text-emerald-800 leading-tight">計算の順序マスター</h1>
+                <p class="text-xs text-gray-500 hidden sm:block">カッコと四則算のルールをおぼえよう！</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button id="soundToggleBtn" onclick="toggleSound()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 border border-gray-300">
+                <i id="soundIcon" class="fa-solid fa-volume-high text-emerald-600"></i>
+                <span id="soundText" class="hidden sm:inline">おと: ON</span>
+            </button>
+            <button onclick="showRulesModal()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl text-sm font-bold border border-amber-300 flex items-center gap-1">
+                <i class="fa-solid fa-book-open"></i>
+                <span>ルール</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-3xl flex-1 flex flex-col justify-center">
+
+        <!-- 1. MODE SELECTION SCREEN -->
+        <div id="startScreen" class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-4 border-emerald-300 text-center animate-pop">
+            <div class="inline-block bg-emerald-100 text-emerald-800 font-bold px-4 py-1.5 rounded-full text-sm mb-4">
+                小学4年生 算数「計算の順序と規則」
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black text-gray-800 mb-2">どれに チャレンジする？</h2>
+            <p class="text-gray-600 text-sm mb-6">計算のじゅんじょ（カッコ → かけ算・わり算 → たし算-ひき算）をマスターしよう！</p>
+
+            <!-- Mode Selection Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <!-- Level 1 -->
+                <button onclick="startGame(1)" class="btn-action bg-gradient-to-b from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white rounded-2xl p-4 flex flex-col items-center justify-between text-left group">
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="bg-blue-200 text-blue-900 text-xs font-black px-2.5 py-1 rounded-lg">レベル 1</span>
+                        <i class="fa-solid fa-seedling text-2xl text-blue-100 group-hover:scale-125 transition-transform"></i>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="text-lg font-bold">かんたん</h3>
+                        <p class="text-xs text-blue-100 mt-1">カッコなし（3つの数）<br>（例: 5 + 3 × 4）</p>
+                    </div>
+                </button>
+
+                <!-- Level 2 -->
+                <button onclick="startGame(2)" class="btn-action bg-gradient-to-b from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white rounded-2xl p-4 flex flex-col items-center justify-between text-left group">
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="bg-amber-200 text-amber-900 text-xs font-black px-2.5 py-1 rounded-lg">レベル 2</span>
+                        <i class="fa-solid fa-tree text-2xl text-amber-100 group-hover:scale-125 transition-transform"></i>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="text-lg font-bold">ふつう</h3>
+                        <p class="text-xs text-amber-100 mt-1">カッコつき（3つの数）<br>（例: (12 + 8) × 3）</p>
+                    </div>
+                </button>
+
+                <!-- Level 3 -->
+                <button onclick="startGame(3)" class="btn-action bg-gradient-to-b from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-2xl p-4 flex flex-col items-center justify-between text-left group">
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="bg-rose-200 text-rose-900 text-xs font-black px-2.5 py-1 rounded-lg">レベル 3</span>
+                        <i class="fa-solid fa-crown text-2xl text-rose-100 group-hover:scale-125 transition-transform"></i>
+                    </div>
+                    <div class="w-full">
+                        <h3 class="text-lg font-bold">むずかしい</h3>
+                        <p class="text-xs text-rose-100 mt-1">カッコ＆四則混在<br>（例: 24 ÷ (10 - 2)）</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Game Option toggles -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-gray-200 flex flex-wrap justify-center gap-6 text-sm">
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-700">
+                    <input type="radio" name="gameMode" value="normal" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                    <span><i class="fa-solid fa-clock text-blue-500"></i> じっくりモード（制限時間なし）</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-gray-700">
+                    <input type="radio" name="gameMode" value="timeattack" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                    <span><i class="fa-solid fa-stopwatch text-rose-500"></i> タイムアタック（60秒勝負）</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 2. GAMEPLAY SCREEN -->
+        <div id="gameScreen" class="hidden flex-col gap-3">
+            
+            <!-- Game Header Status Bar -->
+            <div class="bg-white rounded-2xl p-3 shadow border-2 border-green-200 flex justify-between items-center text-sm font-bold">
+                <div class="flex items-center gap-3">
+                    <span id="levelBadge" class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-extrabold">レベル 1</span>
+                    <span class="text-gray-600">だい <span id="qCurrent" class="text-emerald-600 font-black text-base">1</span> / <span id="qTotal">5</span> 問</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="timerDisplay" class="hidden items-center gap-1 text-rose-600 font-black">
+                        <i class="fa-solid fa-stopwatch"></i> <span id="timeLeft">60</span>秒
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <i class="fa-solid fa-star text-amber-400 text-lg"></i>
+                        <span id="scoreDisplay" class="text-lg font-black text-amber-600">0</span> 点
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Chalkboard Area -->
+            <div class="chalkboard p-4 sm:p-6 text-white text-center flex flex-col justify-between min-h-[220px] sm:min-h-[250px] relative overflow-hidden">
+                
+                <!-- Mascot & Combo Badge -->
+                <div class="flex justify-between items-start z-10">
+                    <div id="comboContainer" class="opacity-0 transition-opacity duration-300 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-black text-xs sm:text-sm px-3 py-1 rounded-full shadow-lg flex items-center gap-1 transform -rotate-3">
+                        <i class="fa-solid fa-fire text-yellow-200 animate-bounce"></i>
+                        <span id="comboCount">2</span> れんぞく せいかい！
+                    </div>
+                    <button onclick="showHint()" class="bg-yellow-400 hover:bg-yellow-300 text-yellow-950 text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl shadow-md border-2 border-yellow-200 flex items-center gap-1 transform active:scale-95 transition">
+                        <i class="fa-solid fa-lightbulb"></i> ヒントをみる
+                    </button>
+                </div>
+
+                <!-- Problem Display -->
+                <div class="my-auto py-2 z-10">
+                    <div id="problemFormula" class="text-2xl sm:text-4xl font-extrabold tracking-wider text-yellow-100 drop-shadow-md mb-2">
+                        <!-- Formula rendered dynamically -->
+                    </div>
+
+                    <!-- Input Answer Line -->
+                    <div class="flex justify-center items-center gap-2 mt-4">
+                        <span class="text-2xl sm:text-3xl font-black text-white">=</span>
+                        <div id="answerDisplay" class="w-32 sm:w-40 h-12 sm:h-14 bg-white/10 border-2 border-dashed border-yellow-300 rounded-xl flex items-center justify-center text-2xl sm:text-3xl font-black text-yellow-300 shadow-inner cursor-pointer" onclick="focusAnswer()">
+                            <span id="userAnswerText"></span>
+                            <span id="cursor" class="w-0.5 h-7 bg-yellow-300 animate-pulse ml-0.5"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step Hint Box (Hidden by default) -->
+                <div id="hintBox" class="hidden bg-emerald-950/80 border border-emerald-400/50 rounded-xl p-2.5 text-xs sm:text-sm text-emerald-100 z-10 animate-pop">
+                    <span class="font-bold text-yellow-300"><i class="fa-solid fa-circle-info"></i> アドバイス:</span>
+                    <span id="hintText">まず カッコの中の計算を さきにやろう！</span>
+                </div>
+
+                <!-- Visual Overlay Feedback (Hanamaru / Cross) -->
+                <div id="feedbackOverlay" class="absolute inset-0 bg-black/40 flex items-center justify-center z-20 hidden pointer-events-none">
+                    <div id="feedbackIcon" class="transform scale-125"></div>
+                </div>
+            </div>
+
+            <!-- Keypad & Action Controls -->
+            <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-lg border-2 border-green-200">
+                <div class="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+                    <!-- Numbers 1-9 -->
+                    <button onclick="appendNum('7')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">7</button>
+                    <button onclick="appendNum('8')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">8</button>
+                    <button onclick="appendNum('9')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">9</button>
+                    <button onclick="clearAnswer()" class="btn-action bg-amber-100 hover:bg-amber-200 text-amber-800 py-3 rounded-xl text-base font-bold flex items-center justify-center">
+                        <i class="fa-solid fa-delete-left text-lg"></i>
+                    </button>
+
+                    <button onclick="appendNum('4')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">4</button>
+                    <button onclick="appendNum('5')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">5</button>
+                    <button onclick="appendNum('6')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">6</button>
+                    <button onclick="appendNum('0')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">0</button>
+
+                    <button onclick="appendNum('1')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">1</button>
+                    <button onclick="appendNum('2')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">2</button>
+                    <button onclick="appendNum('3')" class="btn-key py-3 rounded-xl text-xl font-black text-slate-700">3</button>
+                    
+                    <!-- Submit Button -->
+                    <button onclick="checkAnswer()" class="btn-action bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white py-3 rounded-xl text-base font-extrabold flex items-center justify-center gap-1 shadow-md">
+                        <span>こたえ</span>
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. EXPLANATION MODAL (Show when answer is wrong) -->
+        <div id="explanationModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-4 border-rose-300 animate-pop text-gray-800">
+                <div class="text-center mb-4">
+                    <span class="inline-block bg-rose-100 text-rose-700 font-extrabold px-3 py-1 rounded-full text-xs">おしい！じゅんじょを たしかめよう</span>
+                    <h3 class="text-xl font-black text-rose-600 mt-1">正しい計算のステップ</h3>
+                </div>
+
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-5 text-sm space-y-2">
+                    <p class="font-bold text-gray-700">もんだい: <span id="explainFormula" class="text-base text-gray-900"></span></p>
+                    <hr class="border-amber-200">
+                    <div id="explainSteps" class="space-y-1.5 text-gray-700 font-medium">
+                        <!-- Dynamic steps generated here -->
+                    </div>
+                    <div class="pt-2 border-t border-amber-200 flex justify-between items-center font-black text-base text-emerald-700">
+                        <span>せいかい:</span>
+                        <span id="explainCorrectAnswer" class="text-xl text-emerald-600"></span>
+                    </div>
+                </div>
+
+                <button onclick="nextQuestion()" class="btn-action w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-xl text-base text-center shadow-lg">
+                    つぎの問題へ進む <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. RESULT SCREEN -->
+        <div id="resultScreen" class="hidden bg-white rounded-3xl p-6 sm:p-8 shadow-xl border-4 border-emerald-300 text-center animate-pop">
+            <div id="resultBadge" class="inline-block bg-amber-100 text-amber-800 font-black px-4 py-1.5 rounded-full text-sm mb-3">
+                ゲームクリア！
+            </div>
+            <h2 id="resultTitle" class="text-2xl sm:text-3xl font-black text-gray-800 mb-1">たいしたもんだ！</h2>
+            <p id="resultSubtitle" class="text-gray-600 text-sm mb-6">計算のじゅんじょがバッチリ頭に入ったね！</p>
+
+            <!-- Score Summary Card -->
+            <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border-2 border-emerald-200 mb-6 max-w-sm mx-auto space-y-3">
+                <div class="flex justify-between items-center text-sm font-bold text-gray-600">
+                    <span>せいかい数:</span>
+                    <span class="text-base text-gray-800 font-black"><span id="resCorrect">0</span> / <span id="resTotal">5</span> 問</span>
+                </div>
+                <div class="flex justify-between items-center text-sm font-bold text-gray-600">
+                    <span>さいだいコンボ:</span>
+                    <span class="text-base text-amber-600 font-black"><span id="resMaxCombo">0</span> れんぞく</span>
+                </div>
+                <hr class="border-emerald-200">
+                <div class="flex justify-between items-center font-extrabold text-base text-emerald-900">
+                    <span>ごうけいスコア:</span>
+                    <span class="text-3xl text-emerald-600 font-black"><span id="resScore">0</span> 点</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+                <button onclick="goHome()" class="btn-action bg-gray-200 hover:bg-gray-300 text-gray-700 font-black py-3 px-6 rounded-xl text-sm">
+                    <i class="fa-solid fa-house mr-1"></i> タイトルへ
+                </button>
+                <button onclick="restartGame()" class="btn-action bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 px-8 rounded-xl text-sm shadow-md">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> もういちど遊ぶ
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. RULES & CHEAT SHEET MODAL -->
+        <div id="rulesModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border-4 border-amber-300 animate-pop text-gray-800">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-black text-amber-800 flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap text-amber-500"></i> 計算のきまり（じゅんじょ）
+                    </h3>
+                    <button onclick="closeRulesModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-4 text-sm font-medium text-gray-700">
+                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-start gap-3">
+                        <div class="bg-amber-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">1</div>
+                        <div>
+                            <p class="font-extrabold text-amber-900">カッコ ( ) の中を いちばん最初に計算！</p>
+                            <p class="text-xs text-gray-500">例: 5 × <span class="bg-yellow-200 px-1 rounded">(2 + 3)</span> → 5 × 5</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 flex items-start gap-3">
+                        <div class="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">2</div>
+                        <div>
+                            <p class="font-extrabold text-blue-900">かけ算 (×) と わり算 (÷) をつぎに計算！</p>
+                            <p class="text-xs text-gray-500">例: 10 - <span class="bg-blue-200 px-1 rounded">2 × 3</span> → 10 - 6</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex items-start gap-3">
+                        <div class="bg-emerald-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 mt-0.5">3</div>
+                        <div>
+                            <p class="font-extrabold text-emerald-900">たし算 (+) と ひき算 (-) は ひだりから計算！</p>
+                            <p class="text-xs text-gray-500">同じじゅんいのときは、左からじゅんばんに解こう！</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="closeRulesModal()" class="btn-action w-full mt-6 bg-amber-500 hover:bg-amber-600 text-white font-black py-3 rounded-xl text-sm shadow">
+                    わかりました！
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Credit -->
+    <footer class="mt-4 text-center text-xs text-gray-500 font-medium">
+        小学4年生 算数「計算の順序と規則」学習Webアプリ
+    </footer>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        // Game State Variables
+        let currentLevel = 1;
+        let gameMode = 'normal'; // 'normal' or 'timeattack'
+        let currentQuestionIdx = 0;
+        let totalQuestions = 5;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let correctCount = 0;
+        let currentAnswer = '';
+        let timerInterval = null;
+        let timeLeft = 60;
+        let currentProblem = null;
+        let soundEnabled = true;
+
+        // Audio System via Tone.js
+        const synth = new Tone.Synth().toDestination();
+        
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'correct') {
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.3);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease("A3", "8n", now);
+                    synth.triggerAttackRelease("D3", "4n", now + 0.15);
+                } else if (type === 'click') {
+                    synth.triggerAttackRelease("C4", "16n", now);
+                } else if (type === 'fanfare') {
+                    synth.triggerAttackRelease("G4", "8n", now);
+                    synth.triggerAttackRelease("C5", "8n", now + 0.15);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.3);
+                    synth.triggerAttackRelease("G5", "2n", now + 0.45);
+                }
+            } catch (e) {
+                console.log("Audio play error", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundText');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high text-emerald-600';
+                text.innerText = 'おと: ON';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-gray-400';
+                text.innerText = 'おと: OFF';
+            }
+        }
+
+        // Add Physical Keyboard Listener for PC users
+        window.addEventListener('keydown', (e) => {
+            const gameScreen = document.getElementById('gameScreen');
+            if (gameScreen.classList.contains('hidden')) return;
+
+            if (e.key >= '0' && e.key <= '9') {
+                appendNum(e.key);
+            } else if (e.key === 'Backspace') {
+                deleteLastChar();
+            } else if (e.key === 'Enter') {
+                const expModal = document.getElementById('explanationModal');
+                if (!expModal.classList.contains('hidden')) {
+                    nextQuestion();
+                } else {
+                    checkAnswer();
+                }
+            } else if (e.key === 'Escape') {
+                clearAnswer();
+            }
+        });
+
+        // Question Generators for 4th Grade Level (STRICTLY 3 NUMBERS MAX & NON-NEGATIVE)
+        function generateProblem(level) {
+            let formula = '';
+            let val = 0;
+            let steps = [];
+            let hint = '';
+
+            if (level === 1) {
+                // Level 1: Exactly 3 numbers, No Parentheses
+                const type = Math.floor(Math.random() * 4);
+                if (type === 0) {
+                    // A + B × C (3 numbers: A, B, C)
+                    const b = Math.floor(Math.random() * 8) + 2; 
+                    const c = Math.floor(Math.random() * 8) + 2; 
+                    const a = Math.floor(Math.random() * 30) + 5;
+                    val = a + (b * c);
+                    formula = `${a} + ${b} × ${c}`;
+                    steps = [
+                        `① かけ算の <span class="text-rose-600 font-bold">${b} × ${c} = ${b*c}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} + ${b*c} = ${val}</span> を計算`
+                    ];
+                    hint = `たし算より「かけ算 (${b} × ${c})」を先に計算するよ！`;
+                } else if (type === 1) {
+                    // A - B × C (3 numbers: A, B, C | Guaranteed A >= B*C)
+                    const b = Math.floor(Math.random() * 5) + 2; 
+                    const c = Math.floor(Math.random() * 6) + 2; 
+                    const bc = b * c;
+                    const a = bc + Math.floor(Math.random() * 25);
+                    val = a - bc;
+                    formula = `${a} - ${b} × ${c}`;
+                    steps = [
+                        `① かけ算の <span class="text-rose-600 font-bold">${b} × ${c} = ${bc}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} - ${bc} = ${val}</span> を計算`
+                    ];
+                    hint = `ひき算より「かけ算 (${b} × ${c})」を先に計算するよ！`;
+                } else if (type === 2) {
+                    // A + B ÷ C (3 numbers: A, B, C)
+                    const c = Math.floor(Math.random() * 7) + 2; 
+                    const mult = Math.floor(Math.random() * 8) + 2;
+                    const b = c * mult;
+                    const a = Math.floor(Math.random() * 30) + 5;
+                    val = a + mult;
+                    formula = `${a} + ${b} ÷ ${c}`;
+                    steps = [
+                        `① わり算の <span class="text-rose-600 font-bold">${b} ÷ ${c} = ${mult}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} + ${mult} = ${val}</span> を計算`
+                    ];
+                    hint = `たし算より「わり算 (${b} ÷ ${c})」を先に計算するよ！`;
+                } else {
+                    // A × B - C (3 numbers: A, B, C | Guaranteed A*B >= C)
+                    const a = Math.floor(Math.random() * 8) + 2;
+                    const b = Math.floor(Math.random() * 8) + 2;
+                    const ab = a * b;
+                    const c = Math.floor(Math.random() * ab); 
+                    val = ab - c;
+                    formula = `${a} × ${b} - ${c}`;
+                    steps = [
+                        `① かけ算の <span class="text-rose-600 font-bold">${a} × ${b} = ${ab}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${ab} - ${c} = ${val}</span> を計算`
+                    ];
+                    hint = `左にある「かけ算 (${a} × ${b})」から計算しよう！`;
+                }
+            } else if (level === 2) {
+                // Level 2: Exactly 3 numbers, Single Parenthesis
+                const type = Math.floor(Math.random() * 4);
+                if (type === 0) {
+                    // (A + B) × C (3 numbers: A, B, C)
+                    const a = Math.floor(Math.random() * 15) + 3;
+                    const b = Math.floor(Math.random() * 15) + 3;
+                    const c = Math.floor(Math.random() * 7) + 2;
+                    val = (a + b) * c;
+                    formula = `(${a} + ${b}) × ${c}`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${a} + ${b}) = ${a+b}</span> を一番先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a+b} × ${c} = ${val}</span> を計算`
+                    ];
+                    hint = `まずは「カッコの中 (${a} + ${b})」を一番最初に計算しよう！`;
+                } else if (type === 1) {
+                    // (A - B) ÷ C (3 numbers: A, B, C | Guaranteed A > B)
+                    const c = Math.floor(Math.random() * 6) + 2;
+                    const mult = Math.floor(Math.random() * 8) + 1;
+                    const diff = c * mult; 
+                    const b = Math.floor(Math.random() * 15) + 1;
+                    const a = b + diff; 
+                    val = mult;
+                    formula = `(${a} - ${b}) ÷ ${c}`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${a} - ${b}) = ${diff}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${diff} ÷ ${c} = ${val}</span> を計算`
+                    ];
+                    hint = `わり算よりも「カッコの中 (${a} - ${b})」が先だよ！`;
+                } else if (type === 2) {
+                    // A × (B - C) (3 numbers: A, B, C | Guaranteed B > C)
+                    const a = Math.floor(Math.random() * 8) + 2;
+                    const c = Math.floor(Math.random() * 10) + 1;
+                    const diff = Math.floor(Math.random() * 8) + 1;
+                    const b = c + diff; 
+                    val = a * diff;
+                    formula = `${a} × (${b} - ${c})`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${b} - ${c}) = ${diff}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} × ${diff} = ${val}</span> を計算`
+                    ];
+                    hint = `「カッコの中 (${b} - ${c})」を計算してから、かけ算をしよう！`;
+                } else {
+                    // (A - B) × C (3 numbers: A, B, C | Guaranteed A > B)
+                    const diff = Math.floor(Math.random() * 10) + 2;
+                    const b = Math.floor(Math.random() * 15) + 1;
+                    const a = b + diff;
+                    const c = Math.floor(Math.random() * 6) + 2;
+                    val = diff * c;
+                    formula = `(${a} - ${b}) × ${c}`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${a} - ${b}) = ${diff}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${diff} × ${c} = ${val}</span> を計算`
+                    ];
+                    hint = `「カッコの中 (${a} - ${b})」を先に引いてから、かけ算しよう！`;
+                }
+            } else {
+                // Level 3: Max 3 numbers, Parentheses & Division combinations
+                const type = Math.floor(Math.random() * 3);
+                if (type === 0) {
+                    // A ÷ (B + C) (3 numbers: A, B, C)
+                    const b = Math.floor(Math.random() * 6) + 1;
+                    const c = Math.floor(Math.random() * 6) + 1;
+                    const sum = b + c;
+                    const mult = Math.floor(Math.random() * 8) + 2;
+                    const a = sum * mult;
+                    val = mult;
+                    formula = `${a} ÷ (${b} + ${c})`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${b} + ${c}) = ${sum}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} ÷ ${sum} = ${val}</span> を計算`
+                    ];
+                    hint = `わり算より「カッコの中 (${b} + ${c})」を一番先に計算！`;
+                } else if (type === 1) {
+                    // A ÷ (B - C) (3 numbers: A, B, C | Guaranteed B > C)
+                    const c = Math.floor(Math.random() * 6) + 1;
+                    const diff = Math.floor(Math.random() * 5) + 1;
+                    const b = c + diff;
+                    const mult = Math.floor(Math.random() * 8) + 2;
+                    const a = diff * mult;
+                    val = mult;
+                    formula = `${a} ÷ (${b} - ${c})`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${b} - ${c}) = ${diff}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} ÷ ${diff} = ${val}</span> を計算`
+                    ];
+                    hint = `「カッコの中 (${b} - ${c})」を計算してからわり算をしよう！`;
+                } else {
+                    // A - (B + C) (3 numbers: A, B, C | Guaranteed A >= B+C)
+                    const b = Math.floor(Math.random() * 15) + 2;
+                    const c = Math.floor(Math.random() * 15) + 2;
+                    const sum = b + c;
+                    const a = sum + Math.floor(Math.random() * 30);
+                    val = a - sum;
+                    formula = `${a} - (${b} + ${c})`;
+                    steps = [
+                        `① カッコの中の <span class="text-rose-600 font-bold">(${b} + ${c}) = ${sum}</span> を先に計算`,
+                        `② <span class="text-emerald-600 font-bold">${a} - ${sum} = ${val}</span> を計算`
+                    ];
+                    hint = `カッコの中 (${b} + ${c}) をまとめた後、最後に ${a} から引こう！`;
+                }
+            }
+
+            return { formula, answer: val, steps, hint };
+        }
+
+        // Screen Navigation Functions
+        function startGame(level) {
+            playSound('click');
+            currentLevel = level;
+            const modeRadios = document.getElementsByName('gameMode');
+            for (let radio of modeRadios) {
+                if (radio.checked) gameMode = radio.value;
+            }
+
+            // Reset Game Vars
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            correctCount = 0;
+            currentQuestionIdx = 1;
+            totalQuestions = (gameMode === 'timeattack') ? 999 : 5;
+
+            // UI updates
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('gameScreen').classList.add('flex');
+
+            document.getElementById('levelBadge').innerText = `レベル ${level}`;
+            document.getElementById('qTotal').innerText = (gameMode === 'timeattack') ? '∞' : totalQuestions;
+            document.getElementById('scoreDisplay').innerText = '0';
+            updateComboUI();
+
+            const timerDisp = document.getElementById('timerDisplay');
+            if (gameMode === 'timeattack') {
+                timeLeft = 60;
+                timerDisp.classList.remove('hidden');
+                timerDisp.classList.add('flex');
+                document.getElementById('timeLeft').innerText = timeLeft;
+                clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('timeLeft').innerText = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timerInterval);
+                        finishGame();
+                    }
+                }, 1000);
+            } else {
+                timerDisp.classList.add('hidden');
+                timerDisp.classList.remove('flex');
+            }
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            currentAnswer = '';
+            document.getElementById('userAnswerText').innerText = '';
+            document.getElementById('hintBox').classList.add('hidden');
+            
+            document.getElementById('qCurrent').innerText = currentQuestionIdx;
+            
+            // Generate problem
+            currentProblem = generateProblem(currentLevel);
+            document.getElementById('problemFormula').innerText = currentProblem.formula;
+        }
+
+        function appendNum(num) {
+            playSound('click');
+            if (currentAnswer.length < 5) {
+                currentAnswer += num;
+                document.getElementById('userAnswerText').innerText = currentAnswer;
+            }
+        }
+
+        function deleteLastChar() {
+            playSound('click');
+            if (currentAnswer.length > 0) {
+                currentAnswer = currentAnswer.slice(0, -1);
+                document.getElementById('userAnswerText').innerText = currentAnswer;
+            }
+        }
+
+        function clearAnswer() {
+            playSound('click');
+            currentAnswer = '';
+            document.getElementById('userAnswerText').innerText = '';
+        }
+
+        function showHint() {
+            playSound('click');
+            const hintBox = document.getElementById('hintBox');
+            document.getElementById('hintText').innerText = currentProblem.hint;
+            hintBox.classList.remove('hidden');
+        }
+
+        function checkAnswer() {
+            if (currentAnswer === '') return;
+
+            const userVal = parseInt(currentAnswer, 10);
+            const isCorrect = (userVal === currentProblem.answer);
+
+            if (isCorrect) {
+                playSound('correct');
+                showFeedback(true);
+                
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+                correctCount++;
+
+                // Score Calculation
+                const basePoints = currentLevel * 100;
+                const comboBonus = (combo - 1) * 20;
+                score += (basePoints + comboBonus);
+                document.getElementById('scoreDisplay').innerText = score;
+
+                updateComboUI();
+
+                setTimeout(() => {
+                    hideFeedback();
+                    if (gameMode === 'normal' && currentQuestionIdx >= totalQuestions) {
+                        finishGame();
+                    } else {
+                        currentQuestionIdx++;
+                        loadQuestion();
+                    }
+                }, 1000);
+            } else {
+                playSound('wrong');
+                showFeedback(false);
+                combo = 0;
+                updateComboUI();
+
+                setTimeout(() => {
+                    hideFeedback();
+                    showExplanationModal();
+                }, 1000);
+            }
+        }
+
+        function updateComboUI() {
+            const container = document.getElementById('comboContainer');
+            if (combo >= 2) {
+                document.getElementById('comboCount').innerText = combo;
+                container.classList.remove('opacity-0');
+            } else {
+                container.classList.add('opacity-0');
+            }
+        }
+
+        function showFeedback(isCorrect) {
+            const overlay = document.getElementById('feedbackOverlay');
+            const iconContainer = document.getElementById('feedbackIcon');
+            overlay.classList.remove('hidden');
+
+            if (isCorrect) {
+                // Hanamaru SVG
+                iconContainer.innerHTML = `
+                    <svg class="w-32 h-32 text-rose-500 drop-shadow-lg" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" class="hanamaru" stroke-dasharray="251" stroke-dashoffset="0"/>
+                        <circle cx="50" cy="50" r="30" class="hanamaru" stroke-dasharray="188" stroke-dashoffset="0" style="animation-delay: 0.2s"/>
+                        <path d="M 50 15 Q 60 35 85 50 Q 60 65 50 85 Q 40 65 15 50 Q 40 35 50 15 Z" fill="none" stroke="#ef4444" stroke-width="3"/>
+                    </svg>
+                `;
+            } else {
+                // Cross SVG
+                iconContainer.innerHTML = `
+                    <div class="text-rose-500 text-8xl font-black drop-shadow-lg animate-shake">
+                        <i class="fa-solid fa-xmark"></i>
+                    </div>
+                `;
+            }
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedbackOverlay').classList.add('hidden');
+        }
+
+        function showExplanationModal() {
+            document.getElementById('explainFormula').innerText = currentProblem.formula;
+            document.getElementById('explainCorrectAnswer').innerText = currentProblem.answer;
+
+            const stepsContainer = document.getElementById('explainSteps');
+            stepsContainer.innerHTML = '';
+            currentProblem.steps.forEach(step => {
+                const div = document.createElement('div');
+                div.className = 'bg-white p-2 rounded-lg border border-amber-200 shadow-sm';
+                div.innerHTML = step;
+                stepsContainer.appendChild(div);
+            });
+
+            document.getElementById('explanationModal').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            playSound('click');
+            document.getElementById('explanationModal').classList.add('hidden');
+            if (gameMode === 'normal' && currentQuestionIdx >= totalQuestions) {
+                finishGame();
+            } else {
+                currentQuestionIdx++;
+                loadQuestion();
+            }
+        }
+
+        function finishGame() {
+            clearInterval(timerInterval);
+            playSound('fanfare');
+
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('flex');
+            document.getElementById('resultScreen').classList.remove('hidden');
+
+            document.getElementById('resCorrect').innerText = correctCount;
+            document.getElementById('resTotal').innerText = (gameMode === 'timeattack') ? (currentQuestionIdx - 1) : totalQuestions;
+            document.getElementById('resMaxCombo').innerText = maxCombo;
+            document.getElementById('resScore').innerText = score;
+
+            // Rating message based on score
+            const title = document.getElementById('resultTitle');
+            const sub = document.getElementById('resultSubtitle');
+
+            if (score >= 500) {
+                title.innerText = "👑 かんぺき！計算のめいじん！";
+                sub.innerText = "カッコも四則算もばっちり理解できているね！";
+            } else if (score >= 300) {
+                title.innerText = "🌟 すばらしい！";
+                sub.innerText = "計算のじゅんじょマスターまで あとすこし！";
+            } else {
+                title.innerText = "👍 ナイスファイト！";
+                sub.innerText = "なんども練習して計算ルールをおぼえよう！";
+            }
+        }
+
+        function goHome() {
+            playSound('click');
+            clearInterval(timerInterval);
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('flex');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('explanationModal').classList.add('hidden');
+            document.getElementById('startScreen').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            startGame(currentLevel);
+        }
+
+        function showRulesModal() {
+            playSound('click');
+            document.getElementById('rulesModal').classList.remove('hidden');
+        }
+
+        function closeRulesModal() {
+            playSound('click');
+            document.getElementById('rulesModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
